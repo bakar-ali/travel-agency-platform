@@ -4,6 +4,7 @@ node_modules
 .gitignore
 .env
 .env.local
+tours/
 *.md
 prisma/dev.db
 prisma/dev.db-journal

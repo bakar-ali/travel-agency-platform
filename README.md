@@ -28,7 +28,7 @@ nano .env   # set DATABASE_URL, INSTAGRAM URLs
 docker compose up -d --build
 ```
 
-The container automatically runs `prisma db push` and PDF ingestion on startup.
+The container automatically runs `prisma db push` and seeds tours from `data/tours.json` on startup.
 
 App will be available at **http://your-server:3000**
 
@@ -58,7 +58,10 @@ npm install
 # Initialize database
 npm run db:push
 
-# Parse all PDFs in /tours and upsert into database
+# Parse local PDFs → export JSON (PDFs stay on your machine only)
+npm run db:export
+
+# Seed database from data/tours.json (used locally and on server)
 npm run db:ingest
 
 # Seed demo bookings for calendar dashboard
@@ -85,17 +88,28 @@ INSTAGRAM_URL="https://www.instagram.com/yourpage"
 
 ## 1. PDF Parsing & Ingestion Strategy
 
-### Library Choice: `pdf-parse`
+**PDFs are local only** — they live in `/tours/` on your dev machine, are gitignored, and are never deployed to GitHub or the server.
 
-Tour brochures in `/tours/*.pdf` are text-based PDFs (not scanned images). `pdf-parse` extracts raw text efficiently without OCR overhead.
+### Workflow
+
+1. Place brochure PDFs in `/tours/` (local only)
+2. Run `npm run db:export` — parses PDFs and writes `data/tours.json`
+3. Commit `data/tours.json` to Git — this is what gets deployed
+4. Server runs `npm run db:ingest` (seeds from JSON, no PDFs needed)
+
+### Library: `pdf-parse` (dev dependency)
 
 ### Script Structure
 
 ```
 scripts/
-├── parse-tour-pdf.ts    # Core parser — exports parseTourPdf(), parseAllTourPdfs()
-├── ingest-pdfs.ts       # DB upsert script (npm run db:ingest)
-└── test-pdf.ts          # Debug helper for single PDF inspection
+├── parse-tour-pdf.ts       # Core PDF parser
+├── export-tours-json.ts    # Local: PDFs → data/tours.json
+├── seed-tours-from-json.ts # Seed DB from JSON (npm run db:ingest)
+├── seed-tours.mjs          # Plain Node seed (Docker startup)
+└── ingest-pdfs.ts          # Local dev: PDFs → DB directly
+data/
+└── tours.json              # Committed parsed tour catalog
 ```
 
 ### Extraction Pipeline

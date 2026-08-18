@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local PDF brochures (parsed to data/tours.json — never commit PDFs)
+/tours/*.pdf
