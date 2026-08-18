@@ -26,11 +26,6 @@ export function Footer() {
                   Tour Catalog
                 </Link>
               </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-white">
-                  Operations Dashboard
-                </Link>
-              </li>
             </ul>
           </div>
           <div>

@@ -127,7 +127,7 @@ data/
 ### Upsert Flow
 
 ```
-/tours/*.pdf → parse-tour-pdf.ts → ingest-pdfs.ts → Prisma → SQLite/PostgreSQL
+/tours/*.pdf (local) → export-tours-json.ts → data/tours.json → Git → server seed
 ```
 
 Run on every deploy or when brochures update:
@@ -243,7 +243,8 @@ All **Book Now** and **Inquire** buttons redirect to Instagram with a pre-filled
 
 ```
 c:\travel\
-├── tours/                    # Source PDF brochures (16 files)
+├── tours/                    # Local PDF brochures (gitignored)
+├── data/tours.json           # Parsed catalog (committed & deployed)
 ├── scripts/
 │   ├── parse-tour-pdf.ts
 │   └── ingest-pdfs.ts

@@ -26,12 +26,6 @@ export function Header() {
           >
             Tours
           </Link>
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-stone-600 transition hover:text-brand-600"
-          >
-            Operations
-          </Link>
         </nav>
 
         <Link href="/" className="btn-primary hidden text-sm sm:inline-flex">

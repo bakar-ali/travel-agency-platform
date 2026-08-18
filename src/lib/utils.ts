@@ -34,3 +34,21 @@ export function generateBookingRef(): string {
   const num = Math.floor(10000 + Math.random() * 90000);
   return `${prefix}-${num}`;
 }
+
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export function linesToArray(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+}
+
+export function arrayToLines(items: string[]): string {
+  return items.join("\n");
+}
