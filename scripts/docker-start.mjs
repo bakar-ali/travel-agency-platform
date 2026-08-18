@@ -1,4 +1,3 @@
-import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -21,14 +20,115 @@ function ensureDatabaseUrl() {
   return url;
 }
 
-function runSafe(cmd) {
-  try {
-    console.log(`> ${cmd}`);
-    execSync(cmd, { cwd: root, stdio: "inherit", env: process.env });
-    return true;
-  } catch {
-    console.error(`Command failed: ${cmd}`);
+async function seedToursFromJson() {
+  const jsonPath = path.join(root, "data", "tours.json");
+  if (!fs.existsSync(jsonPath)) {
+    console.error("data/tours.json not found.");
     return false;
+  }
+
+  const tours = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+  const prisma = new PrismaClient();
+  console.log(`Seeding ${tours.length} tours from data/tours.json...`);
+
+  try {
+    for (const tour of tours) {
+      const upserted = await prisma.tour.upsert({
+        where: { slug: tour.slug },
+        create: {
+          slug: tour.slug,
+          title: tour.title,
+          destination: tour.destination,
+          duration: tour.duration,
+          durationText: tour.durationText,
+          summary: tour.summary,
+          overview: tour.overview,
+          highlights: JSON.stringify(tour.highlights),
+          inclusions: JSON.stringify(tour.inclusions),
+          exclusions: JSON.stringify(tour.exclusions),
+          itinerary: JSON.stringify(tour.itinerary),
+          imageUrl: tour.imageUrl,
+          galleryUrls: JSON.stringify(tour.galleryUrls),
+          sourcePdf: tour.sourcePdf,
+        },
+        update: {
+          title: tour.title,
+          destination: tour.destination,
+          duration: tour.duration,
+          durationText: tour.durationText,
+          summary: tour.summary,
+          overview: tour.overview,
+          highlights: JSON.stringify(tour.highlights),
+          inclusions: JSON.stringify(tour.inclusions),
+          exclusions: JSON.stringify(tour.exclusions),
+          itinerary: JSON.stringify(tour.itinerary),
+          imageUrl: tour.imageUrl,
+          galleryUrls: JSON.stringify(tour.galleryUrls),
+          sourcePdf: tour.sourcePdf,
+        },
+      });
+
+      for (const tier of tour.pricingTiers) {
+        await prisma.pricingTier.upsert({
+          where: {
+            tourId_tourType_label: {
+              tourId: upserted.id,
+              tourType: tier.tourType,
+              label: tier.label,
+            },
+          },
+          create: {
+            tourId: upserted.id,
+            tourType: tier.tourType,
+            label: tier.label,
+            price: tier.price,
+            description: tier.description,
+          },
+          update: { price: tier.price, description: tier.description },
+        });
+      }
+
+      const existingTiers = await prisma.pricingTier.findMany({
+        where: { tourId: upserted.id },
+      });
+      const basePrice = tour.pricingTiers[0]?.price ?? 25000;
+
+      if (!existingTiers.some((t) => t.tourType === "PRIVATE")) {
+        await prisma.pricingTier.create({
+          data: {
+            tourId: upserted.id,
+            tourType: "PRIVATE",
+            label: "Private Tour (up to 6 pax)",
+            price: Math.round(basePrice * 2.5),
+            description: "Exclusive vehicle and flexible schedule",
+          },
+        });
+      }
+
+      if (!existingTiers.some((t) => t.tourType === "CUSTOM")) {
+        await prisma.pricingTier.create({
+          data: {
+            tourId: upserted.id,
+            tourType: "CUSTOM",
+            label: "Custom Itinerary",
+            price: Math.round(basePrice * 3),
+            description: "Tailored route and dates — contact for quote",
+          },
+        });
+      }
+
+      console.log(`  ✓ ${tour.title}`);
+    }
+
+    const count = await prisma.tour.count();
+    console.log(`Seeding complete — ${count} tours in database.`);
+    return count > 0;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Seeding failed:", message);
+    return false;
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -142,11 +242,7 @@ async function main() {
     return;
   }
 
-  const jsonPath = path.join(root, "data", "tours.json");
-  if (fs.existsSync(jsonPath)) {
-    console.log("Seeding tours...");
-    runSafe("node scripts/seed-tours.mjs");
-  }
+  await seedToursFromJson();
 
   console.log("Startup tasks complete.");
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseJsonArray, formatCurrency } from "@/lib/utils";
+import { getAllToursFromJson, getTourBySlugFromJson } from "@/lib/tours-json";
 import type { Tour, PricingTier, Booking, Customer } from "@prisma/client";
 
 export type TourWithPricing = Tour & { pricingTiers: PricingTier[] };
@@ -37,20 +38,34 @@ export function serializeBooking(booking: BookingWithRelations) {
 }
 
 export async function getAllTours() {
-  const tours = await prisma.tour.findMany({
-    where: { isActive: true },
-    include: { pricingTiers: true },
-    orderBy: [{ duration: "asc" }, { title: "asc" }],
-  });
-  return tours.map(serializeTour);
+  try {
+    const tours = await prisma.tour.findMany({
+      where: { isActive: true },
+      include: { pricingTiers: true },
+      orderBy: [{ duration: "asc" }, { title: "asc" }],
+    });
+    if (tours.length > 0) {
+      return tours.map(serializeTour);
+    }
+  } catch (error) {
+    console.error("Database tour fetch failed, using JSON fallback:", error);
+  }
+
+  return getAllToursFromJson();
 }
 
 export async function getTourBySlug(slug: string) {
-  const tour = await prisma.tour.findUnique({
-    where: { slug },
-    include: { pricingTiers: true },
-  });
-  return tour ? serializeTour(tour) : null;
+  try {
+    const tour = await prisma.tour.findUnique({
+      where: { slug },
+      include: { pricingTiers: true },
+    });
+    if (tour) return serializeTour(tour);
+  } catch (error) {
+    console.error("Database tour lookup failed, using JSON fallback:", error);
+  }
+
+  return getTourBySlugFromJson(slug);
 }
 
 export async function getAllBookings(filters?: {

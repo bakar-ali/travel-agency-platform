@@ -78,9 +78,8 @@ export default async function HomePage() {
         {tours.length === 0 ? (
           <div className="mt-12 rounded-2xl border-2 border-dashed border-stone-200 p-12 text-center">
             <p className="text-stone-500">
-              No tours loaded yet. Run{" "}
-              <code className="rounded bg-stone-100 px-2 py-1 text-sm">npm run db:ingest</code>{" "}
-              to parse PDF brochures.
+              Tour catalog is temporarily unavailable. Please check the server database
+              connection or redeploy the application.
             </p>
           </div>
         ) : (
