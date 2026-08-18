@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { X, User, Phone, Mail, CreditCard, MapPin, Users, Calendar, Trash2 } from "lucide-react";
 import type { SerializedBooking } from "./CalendarDashboard";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
+import { AddPaymentForm } from "@/components/admin/AddPaymentForm";
 
 interface BookingModalProps {
   booking: SerializedBooking;
   onClose: () => void;
   onDeleted?: () => void;
+  onUpdated?: () => void;
 }
 
 const TOUR_TYPE_LABELS: Record<string, string> = {
@@ -28,15 +31,17 @@ const PAYMENT_LABELS: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Pending", className: "bg-red-100 text-red-800" },
 };
 
-export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps) {
-  const payment = PAYMENT_LABELS[booking.paymentStatus] ?? PAYMENT_LABELS.PENDING;
-  const packageName = packageFromNotes(booking.specialRequests);
+export function BookingModal({ booking, onClose, onDeleted, onUpdated }: BookingModalProps) {
+  const [current, setCurrent] = useState(booking);
+  const payment = PAYMENT_LABELS[current.paymentStatus] ?? PAYMENT_LABELS.PENDING;
+  const packageName = packageFromNotes(current.specialRequests);
+  const balance = current.totalPrice - current.amountPaid;
 
   async function handleDelete() {
-    if (!confirm(`Delete booking ${booking.bookingRef} for ${booking.customer.name}?`)) {
+    if (!confirm(`Delete booking ${current.bookingRef} for ${current.customer.name}?`)) {
       return;
     }
-    await fetch(`/api/bookings/${booking.id}`, { method: "DELETE" });
+    await fetch(`/api/bookings/${current.id}`, { method: "DELETE" });
     onDeleted?.();
     onClose();
   }
@@ -47,8 +52,8 @@ export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps)
       <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between border-b border-stone-100 bg-white px-6 py-4">
           <div>
-            <p className="text-xs font-medium text-brand-600">{booking.bookingRef}</p>
-            <h2 className="font-display text-xl font-bold">{booking.tour.title}</h2>
+            <p className="text-xs font-medium text-brand-600">{current.bookingRef}</p>
+            <h2 className="font-display text-xl font-bold">{current.tour.title}</h2>
           </div>
           <button
             onClick={onClose}
@@ -67,14 +72,14 @@ export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps)
             <div className="mt-3 space-y-2 text-sm">
               <p className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-brand-500" />
-                {booking.tour.destination}
+                {current.tour.destination}
               </p>
               <p className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-brand-500" />
-                {formatDate(booking.startDate)} — {formatDate(booking.endDate)}
+                {formatDate(current.startDate)} — {formatDate(current.endDate)}
               </p>
               <span className="badge bg-brand-100 text-brand-800">
-                {TOUR_TYPE_LABELS[booking.tourType] ?? booking.tourType}
+                {TOUR_TYPE_LABELS[current.tourType] ?? current.tourType}
               </span>
               {packageName && (
                 <span className="badge ml-2 bg-amber-100 text-amber-800">
@@ -92,33 +97,33 @@ export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps)
             <div className="mt-3 space-y-2 text-sm">
               <p className="flex items-center gap-2 font-medium">
                 <User className="h-4 w-4 text-stone-400" />
-                {booking.customer.name}
+                {current.customer.name}
               </p>
               <p className="flex items-center gap-2 text-stone-600">
                 <Phone className="h-4 w-4 text-stone-400" />
-                {booking.customer.phone}
+                {current.customer.phone}
               </p>
-              {booking.customer.email && (
+              {current.customer.email && (
                 <p className="flex items-center gap-2 text-stone-600">
                   <Mail className="h-4 w-4 text-stone-400" />
-                  {booking.customer.email}
+                  {current.customer.email}
                 </p>
               )}
               <p className="flex items-center gap-2 text-stone-600">
                 <Users className="h-4 w-4 text-stone-400" />
-                {booking.participants} participant{booking.participants !== 1 ? "s" : ""}
+                {current.participants} participant{current.participants !== 1 ? "s" : ""}
               </p>
             </div>
           </section>
 
           {/* Passengers */}
-          {booking.passengerList.length > 0 && (
+          {current.passengerList.length > 0 && (
             <section>
               <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-400">
                 Passenger List
               </h3>
               <ul className="mt-3 space-y-1.5">
-                {booking.passengerList.map((p, i) => (
+                {current.passengerList.map((p, i) => (
                   <li
                     key={i}
                     className="flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm"
@@ -144,22 +149,44 @@ export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps)
                   <CreditCard className="h-4 w-4" />
                   Total
                 </span>
-                <span className="font-bold">{booking.formattedTotal}</span>
+                <span className="font-bold">{current.formattedTotal}</span>
               </div>
               <div className="mt-2 flex items-center justify-between text-sm">
                 <span className="text-stone-500">Amount Paid</span>
-                <span className="font-semibold text-green-700">{booking.formattedPaid}</span>
+                <span className="font-semibold text-green-700">{current.formattedPaid}</span>
               </div>
+              {balance > 0 && (
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-stone-500">Balance Due</span>
+                  <span className="font-semibold text-amber-700">{formatCurrency(balance)}</span>
+                </div>
+              )}
               <div className="mt-3 flex items-center justify-between">
                 <span className={`badge ${payment.className}`}>{payment.label}</span>
                 <span className="text-xs text-stone-400">
-                  Due: {booking.formattedTotal !== booking.formattedPaid ? "Yes" : "None"}
+                  Due: {balance > 0 ? formatCurrency(balance) : "None"}
                 </span>
               </div>
-              {booking.paymentNotes && (
-                <p className="mt-3 text-xs italic text-stone-500">{booking.paymentNotes}</p>
+              {current.paymentNotes && (
+                <div className="mt-3 rounded-lg bg-white p-3 text-xs text-stone-500">
+                  <p className="mb-1 font-medium text-stone-600">Payment History</p>
+                  <pre className="whitespace-pre-wrap font-sans">{current.paymentNotes}</pre>
+                </div>
               )}
             </div>
+          </section>
+
+          <section className="rounded-xl border border-brand-100 bg-brand-50/40 p-4">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-700">
+              Add Payment
+            </h3>
+            <AddPaymentForm
+              booking={current}
+              onPaymentAdded={(updated) => {
+                setCurrent(updated);
+                onUpdated?.();
+              }}
+            />
           </section>
 
           <div className="border-t border-stone-100 pt-4">

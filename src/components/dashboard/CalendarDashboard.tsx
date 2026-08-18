@@ -198,6 +198,7 @@ export function CalendarDashboard() {
           booking={selected}
           onClose={() => setSelected(null)}
           onDeleted={fetchBookings}
+          onUpdated={fetchBookings}
         />
       )}
 

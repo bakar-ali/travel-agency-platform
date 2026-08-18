@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { formatCurrency, linesToArray } from "@/lib/utils";
 import { findPackageTier, formatPackageLabel, type PackageLevel } from "@/lib/package-tiers";
+import { BookingCreatedStep } from "@/components/admin/AddPaymentForm";
+import type { SerializedBooking } from "@/components/dashboard/CalendarDashboard";
 
 interface TourOption {
   id: string;
@@ -46,6 +48,7 @@ export function BookingFormModal({
   const [paymentStatus, setPaymentStatus] = useState<"PAID" | "PARTIAL" | "PENDING">("PENDING");
   const [paymentNotes, setPaymentNotes] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [createdBooking, setCreatedBooking] = useState<SerializedBooking | null>(null);
 
   useEffect(() => {
     setToursLoading(true);
@@ -134,7 +137,13 @@ export function BookingFormModal({
       return;
     }
 
+    const booking = (await res.json()) as SerializedBooking;
+    setLoading(false);
+    setCreatedBooking(booking);
     onSaved();
+  }
+
+  function handleDone() {
     onClose();
   }
 
@@ -159,6 +168,13 @@ export function BookingFormModal({
           </button>
         </div>
 
+        {createdBooking ? (
+          <BookingCreatedStep
+            booking={createdBooking}
+            onDone={handleDone}
+            onPaymentAdded={setCreatedBooking}
+          />
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-6 p-6">
           {/* Tour & dates */}
           <section className="grid gap-4 sm:grid-cols-2">
@@ -450,6 +466,7 @@ export function BookingFormModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
