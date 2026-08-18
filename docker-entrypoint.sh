@@ -15,6 +15,12 @@ case "$DATABASE_URL" in
 esac
 echo "DATABASE_URL configured with sslmode=disable"
 
+if [ -z "$ADMIN_PASSWORD" ]; then
+  echo "WARNING: ADMIN_PASSWORD not set — default admin password is 'admin123'"
+else
+  echo "ADMIN_PASSWORD is configured"
+fi
+
 echo "Running database setup..."
 node scripts/docker-start.mjs || echo "WARNING: Database setup had errors."
 

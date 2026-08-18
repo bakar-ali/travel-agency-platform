@@ -13,7 +13,21 @@ function getSecret() {
 }
 
 export function getAdminPassword() {
-  return process.env.ADMIN_PASSWORD || "admin123";
+  const raw = process.env.ADMIN_PASSWORD?.trim();
+  if (!raw) return "admin123";
+  // Dokploy/env UIs sometimes include literal quotes
+  if (
+    (raw.startsWith('"') && raw.endsWith('"')) ||
+    (raw.startsWith("'") && raw.endsWith("'"))
+  ) {
+    return raw.slice(1, -1);
+  }
+  return raw;
+}
+
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 export function createSessionToken(): string {
@@ -50,10 +64,5 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 }
 
 export function verifyAdminPassword(password: string): boolean {
-  const expected = getAdminPassword();
-  try {
-    return timingSafeEqual(Buffer.from(password), Buffer.from(expected));
-  } catch {
-    return password === expected;
-  }
+  return safeEqual(password.trim(), getAdminPassword());
 }

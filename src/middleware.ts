@@ -5,7 +5,12 @@ import { verifySessionTokenEdge } from "@/lib/auth-edge";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname.startsWith("/admin/login")) {
+  // Public admin auth endpoints (must not require a session)
+  if (
+    pathname.startsWith("/admin/login") ||
+    pathname === "/api/admin/login" ||
+    pathname === "/api/admin/logout"
+  ) {
     return NextResponse.next();
   }
 
