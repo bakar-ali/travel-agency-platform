@@ -24,6 +24,7 @@ export function BookingFormModal({
   onSaved,
 }: BookingFormModalProps) {
   const [tours, setTours] = useState<TourOption[]>([]);
+  const [toursLoading, setToursLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,12 +43,20 @@ export function BookingFormModal({
   const [specialRequests, setSpecialRequests] = useState("");
 
   useEffect(() => {
+    setToursLoading(true);
     fetch("/api/admin/tours")
-      .then((r) => r.json())
-      .then((data: TourOption[]) => {
-        setTours(data.filter((t) => t.id));
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Failed to load tours");
+        const data = await r.json();
+        if (!Array.isArray(data)) throw new Error("Invalid tour data");
+        return data as TourOption[];
+      })
+      .then((data) => {
+        setTours(data);
         if (data.length > 0) setTourId(data[0].id);
-      });
+      })
+      .catch(() => setError("Could not load tours. Add tours first or redeploy."))
+      .finally(() => setToursLoading(false));
   }, []);
 
   const selectedTour = useMemo(
@@ -134,13 +143,25 @@ export function BookingFormModal({
                 value={tourId}
                 onChange={(e) => setTourId(e.target.value)}
                 className={inputClass}
+                disabled={toursLoading || tours.length === 0}
               >
-                {tours.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title} ({t.duration} days)
-                  </option>
-                ))}
+                {toursLoading ? (
+                  <option value="">Loading tours...</option>
+                ) : tours.length === 0 ? (
+                  <option value="">No tours available — add a tour first</option>
+                ) : (
+                  tours.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title} ({t.duration} days)
+                    </option>
+                  ))
+                )}
               </select>
+              {!toursLoading && tours.length === 0 && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Go to Admin → Tours → Add Tour, or ensure the database is seeded.
+                </p>
+              )}
             </div>
             <div>
               <label className={labelClass}>Tour Type *</label>
@@ -322,7 +343,7 @@ export function BookingFormModal({
           )}
 
           <div className="flex gap-3 border-t border-stone-100 pt-4">
-            <button type="submit" disabled={loading} className="btn-primary">
+            <button type="submit" disabled={loading || toursLoading || tours.length === 0} className="btn-primary">
               <Plus className="h-4 w-4" />
               {loading ? "Saving..." : "Create Booking"}
             </button>
