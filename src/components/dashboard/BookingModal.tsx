@@ -1,12 +1,13 @@
 "use client";
 
-import { X, User, Phone, Mail, CreditCard, MapPin, Users, Calendar } from "lucide-react";
+import { X, User, Phone, Mail, CreditCard, MapPin, Users, Calendar, Trash2 } from "lucide-react";
 import type { SerializedBooking } from "./CalendarDashboard";
 import { formatDate } from "@/lib/utils";
 
 interface BookingModalProps {
   booking: SerializedBooking;
   onClose: () => void;
+  onDeleted?: () => void;
 }
 
 const TOUR_TYPE_LABELS: Record<string, string> = {
@@ -21,8 +22,17 @@ const PAYMENT_LABELS: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Pending", className: "bg-red-100 text-red-800" },
 };
 
-export function BookingModal({ booking, onClose }: BookingModalProps) {
+export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps) {
   const payment = PAYMENT_LABELS[booking.paymentStatus] ?? PAYMENT_LABELS.PENDING;
+
+  async function handleDelete() {
+    if (!confirm(`Delete booking ${booking.bookingRef} for ${booking.customer.name}?`)) {
+      return;
+    }
+    await fetch(`/api/bookings/${booking.id}`, { method: "DELETE" });
+    onDeleted?.();
+    onClose();
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -139,6 +149,16 @@ export function BookingModal({ booking, onClose }: BookingModalProps) {
               )}
             </div>
           </section>
+
+          <div className="border-t border-stone-100 pt-4">
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Booking
+            </button>
+          </div>
         </div>
       </div>
     </div>

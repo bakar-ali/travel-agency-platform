@@ -10,7 +10,7 @@ export default function AdminCalendarPage() {
           Booking Calendar
         </h1>
         <p className="text-sm text-stone-500">
-          View and manage scheduled tour departures
+          Log bookings and see who is travelling on which dates. Click a date or use New Booking.
         </p>
       </div>
       <CalendarDashboard />

@@ -6,9 +6,11 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg } from "@fullcalendar/core";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import { BookingModal } from "./BookingModal";
 import { DashboardFilters } from "./DashboardFilters";
-import { CalendarDays, Users, CreditCard, MapPin } from "lucide-react";
+import { BookingFormModal } from "@/components/admin/BookingFormModal";
+import { CalendarDays, Users, CreditCard, MapPin, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 export interface SerializedBooking {
@@ -56,6 +58,8 @@ export function CalendarDashboard() {
   const [bookings, setBookings] = useState<SerializedBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SerializedBooking | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createDate, setCreateDate] = useState<string>("");
   const [filters, setFilters] = useState({
     tourType: "",
     paymentStatus: "",
@@ -107,8 +111,24 @@ export function CalendarDashboard() {
     setSelected(info.event.extendedProps.booking as SerializedBooking);
   };
 
+  const handleDateClick = (info: DateClickArg) => {
+    setCreateDate(info.dateStr);
+    setShowCreate(true);
+  };
+
+  const openCreateModal = () => {
+    setCreateDate(new Date().toISOString().slice(0, 10));
+    setShowCreate(true);
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <button onClick={openCreateModal} className="btn-primary text-sm">
+          <Plus className="h-4 w-4" />
+          New Booking
+        </button>
+      </div>
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         {[
@@ -143,7 +163,7 @@ export function CalendarDashboard() {
             {k}
           </span>
         ))}
-        <span className="ml-4 font-medium text-stone-500">Border = Tour Type</span>
+        <span className="ml-4 font-medium text-stone-500">Click a date to add a booking</span>
       </div>
 
       <div className="card overflow-hidden p-4">
@@ -162,18 +182,31 @@ export function CalendarDashboard() {
             }}
             events={events}
             eventClick={handleEventClick}
+            dateClick={handleDateClick}
             height="auto"
             eventDisplay="block"
             dayMaxEvents={3}
             nowIndicator
             editable={false}
-            selectable={false}
+            selectable
           />
         )}
       </div>
 
       {selected && (
-        <BookingModal booking={selected} onClose={() => setSelected(null)} />
+        <BookingModal
+          booking={selected}
+          onClose={() => setSelected(null)}
+          onDeleted={fetchBookings}
+        />
+      )}
+
+      {showCreate && (
+        <BookingFormModal
+          initialDate={createDate}
+          onClose={() => setShowCreate(false)}
+          onSaved={fetchBookings}
+        />
       )}
     </div>
   );

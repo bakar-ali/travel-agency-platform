@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllBookings } from "@/lib/db";
+import { createBooking } from "@/lib/admin-bookings";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -12,4 +13,15 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(bookings);
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const booking = await createBooking(body);
+    return NextResponse.json(booking, { status: 201 });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Failed to create booking" }, { status: 500 });
+  }
 }
