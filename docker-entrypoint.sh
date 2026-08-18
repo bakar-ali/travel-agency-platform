@@ -1,10 +1,15 @@
 #!/bin/sh
+set -e
 
-echo "Running database migrations..."
-node node_modules/prisma/build/index.js db push --skip-generate || echo "WARNING: Database migration failed, starting app anyway..."
+echo "=== Travel Agency Platform Startup ==="
 
-echo "Seeding tours from data/tours.json..."
-node scripts/seed-tours.mjs || echo "Tour seed skipped"
+if [ -z "$DATABASE_URL" ]; then
+  echo "FATAL: DATABASE_URL environment variable is not set."
+  exit 1
+fi
 
-echo "Starting application..."
+echo "Running database setup..."
+node scripts/docker-start.mjs
+
+echo "Starting Next.js..."
 exec su-exec nextjs "$@"
