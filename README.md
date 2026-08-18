@@ -12,7 +12,35 @@ A full-stack tour agency platform with **PDF-driven catalog ingestion**, a **pub
 | PDF Parsing | `pdf-parse` |
 | Icons | Lucide React |
 
-## Quick Start
+## Docker Deployment (Server)
+
+On your server after pulling from GitHub:
+
+```bash
+git clone https://github.com/bakar-ali/travel-agency-platform.git
+cd travel-agency-platform
+
+# Copy and edit environment variables
+cp .env.example .env
+nano .env   # set DATABASE_URL, INSTAGRAM URLs
+
+# Build and run
+docker compose up -d --build
+```
+
+The container automatically runs `prisma db push` and PDF ingestion on startup.
+
+App will be available at **http://your-server:3000**
+
+### Required `.env` on server
+
+```env
+DATABASE_URL="postgresql://user:password@host:5432/dbname"
+NEXT_PUBLIC_INSTAGRAM_URL="https://www.instagram.com/yourpage"
+INSTAGRAM_URL="https://www.instagram.com/yourpage"
+```
+
+---
 
 ```bash
 # Install dependencies
