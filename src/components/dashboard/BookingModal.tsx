@@ -16,6 +16,12 @@ const TOUR_TYPE_LABELS: Record<string, string> = {
   CUSTOM: "Custom Tour",
 };
 
+function packageFromNotes(notes: string | null): string | null {
+  if (!notes) return null;
+  const match = notes.match(/^Package: (.+?)(?:\n|$)/);
+  return match ? match[1] : null;
+}
+
 const PAYMENT_LABELS: Record<string, { label: string; className: string }> = {
   PAID: { label: "Paid", className: "bg-green-100 text-green-800" },
   PARTIAL: { label: "Partial / Deposit", className: "bg-amber-100 text-amber-800" },
@@ -24,6 +30,7 @@ const PAYMENT_LABELS: Record<string, { label: string; className: string }> = {
 
 export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps) {
   const payment = PAYMENT_LABELS[booking.paymentStatus] ?? PAYMENT_LABELS.PENDING;
+  const packageName = packageFromNotes(booking.specialRequests);
 
   async function handleDelete() {
     if (!confirm(`Delete booking ${booking.bookingRef} for ${booking.customer.name}?`)) {
@@ -69,6 +76,11 @@ export function BookingModal({ booking, onClose, onDeleted }: BookingModalProps)
               <span className="badge bg-brand-100 text-brand-800">
                 {TOUR_TYPE_LABELS[booking.tourType] ?? booking.tourType}
               </span>
+              {packageName && (
+                <span className="badge ml-2 bg-amber-100 text-amber-800">
+                  {packageName}
+                </span>
+              )}
             </div>
           </section>
 

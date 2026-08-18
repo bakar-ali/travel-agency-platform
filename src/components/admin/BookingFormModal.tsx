@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Plus } from "lucide-react";
 import { formatCurrency, linesToArray } from "@/lib/utils";
+import { findPackageTier, formatPackageLabel, type PackageLevel } from "@/lib/package-tiers";
 
 interface TourOption {
   id: string;
@@ -30,6 +31,10 @@ export function BookingFormModal({
 
   const [tourId, setTourId] = useState("");
   const [tourType, setTourType] = useState<"GROUP" | "PRIVATE" | "CUSTOM">("GROUP");
+  const [packageLevel, setPackageLevel] = useState<PackageLevel>("standard");
+  const [customDestination, setCustomDestination] = useState("");
+  const [customDuration, setCustomDuration] = useState<number | "">("");
+  const [customItinerary, setCustomItinerary] = useState("");
   const [startDate, setStartDate] = useState(initialDate ?? "");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -59,28 +64,47 @@ export function BookingFormModal({
       .finally(() => setToursLoading(false));
   }, []);
 
+  const isCustom = tourType === "CUSTOM";
+
   const selectedTour = useMemo(
     () => tours.find((t) => t.id === tourId),
     [tours, tourId]
   );
 
+  const selectedTier = useMemo(() => {
+    if (!selectedTour || isCustom) return null;
+    return findPackageTier(selectedTour.pricingTiers, tourType, packageLevel);
+  }, [selectedTour, tourType, packageLevel, isCustom]);
+
+  const tripDays = isCustom
+    ? (customDuration === "" ? selectedTour?.duration ?? 0 : Number(customDuration))
+    : selectedTour?.duration ?? 0;
+
   const suggestedPrice = useMemo(() => {
-    if (!selectedTour) return 0;
-    const tier =
-      selectedTour.pricingTiers.find((t) => t.tourType === tourType) ??
-      selectedTour.pricingTiers[0];
-    if (!tier) return 0;
-    return tourType === "GROUP" ? tier.price : tier.price * participants;
-  }, [selectedTour, tourType, participants]);
+    if (isCustom || !selectedTier) return 0;
+    return tourType === "GROUP"
+      ? selectedTier.price
+      : selectedTier.price * participants;
+  }, [selectedTier, tourType, participants, isCustom]);
 
   useEffect(() => {
-    setTotalPrice(suggestedPrice);
-  }, [suggestedPrice]);
+    if (!isCustom) setTotalPrice(suggestedPrice);
+  }, [suggestedPrice, isCustom]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    const customNotes = isCustom
+      ? [
+          customDestination && `Destination: ${customDestination}`,
+          customItinerary && `Itinerary:\n${customItinerary}`,
+          specialRequests,
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : specialRequests || undefined;
 
     const res = await fetch("/api/bookings", {
       method: "POST",
@@ -88,6 +112,8 @@ export function BookingFormModal({
       body: JSON.stringify({
         tourId,
         tourType,
+        packageLabel: isCustom ? undefined : formatPackageLabel(packageLevel),
+        customDuration: isCustom && customDuration !== "" ? Number(customDuration) : undefined,
         startDate,
         customerName,
         customerPhone,
@@ -98,7 +124,7 @@ export function BookingFormModal({
         amountPaid: amountPaid === "" ? 0 : Number(amountPaid),
         paymentStatus,
         paymentNotes: paymentNotes || undefined,
-        specialRequests: specialRequests || undefined,
+        specialRequests: customNotes,
       }),
     });
 
@@ -167,9 +193,11 @@ export function BookingFormModal({
               <label className={labelClass}>Tour Type *</label>
               <select
                 value={tourType}
-                onChange={(e) =>
-                  setTourType(e.target.value as "GROUP" | "PRIVATE" | "CUSTOM")
-                }
+                onChange={(e) => {
+                  const value = e.target.value as "GROUP" | "PRIVATE" | "CUSTOM";
+                  setTourType(value);
+                  if (value !== "CUSTOM") setPackageLevel("standard");
+                }}
                 className={inputClass}
               >
                 <option value="GROUP">Group Tour</option>
@@ -177,6 +205,41 @@ export function BookingFormModal({
                 <option value="CUSTOM">Custom Tour</option>
               </select>
             </div>
+
+            {!isCustom ? (
+              <div>
+                <label className={labelClass}>Package *</label>
+                <select
+                  value={packageLevel}
+                  onChange={(e) => setPackageLevel(e.target.value as PackageLevel)}
+                  className={inputClass}
+                >
+                  <option value="standard">Standard</option>
+                  <option value="deluxe">Deluxe</option>
+                </select>
+                {selectedTier && (
+                  <p className="mt-1 text-xs text-stone-400">
+                    {selectedTier.label} — {formatCurrency(selectedTier.price)}
+                    {tourType === "PRIVATE" ? " per person" : ""}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className={labelClass}>Custom Duration (days)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={customDuration}
+                  onChange={(e) =>
+                    setCustomDuration(e.target.value === "" ? "" : Number(e.target.value))
+                  }
+                  className={inputClass}
+                  placeholder={selectedTour ? String(selectedTour.duration) : "e.g. 5"}
+                />
+              </div>
+            )}
+
             <div>
               <label className={labelClass}>Departure Date *</label>
               <input
@@ -187,17 +250,44 @@ export function BookingFormModal({
                 className={inputClass}
               />
             </div>
-            {selectedTour && startDate && (
+            {selectedTour && startDate && tripDays > 0 && (
               <p className="sm:col-span-2 text-sm text-stone-500">
                 Returns approx.{" "}
                 {new Date(
-                  new Date(startDate).getTime() +
-                    selectedTour.duration * 24 * 60 * 60 * 1000
+                  new Date(startDate).getTime() + tripDays * 24 * 60 * 60 * 1000
                 ).toLocaleDateString("en-PK")}
-                {" "}({selectedTour.duration} days)
+                {" "}({tripDays} days)
               </p>
             )}
           </section>
+
+          {isCustom && (
+            <section className="grid gap-4 rounded-xl border border-brand-100 bg-brand-50/50 p-4 sm:grid-cols-2">
+              <h3 className="sm:col-span-2 text-sm font-semibold uppercase tracking-wide text-brand-700">
+                Custom Tour Details
+              </h3>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Destination / Route *</label>
+                <input
+                  required
+                  value={customDestination}
+                  onChange={(e) => setCustomDestination(e.target.value)}
+                  className={inputClass}
+                  placeholder="Hunza + Skardu custom route"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Custom Itinerary & Requirements</label>
+                <textarea
+                  rows={4}
+                  value={customItinerary}
+                  onChange={(e) => setCustomItinerary(e.target.value)}
+                  className={inputClass}
+                  placeholder="Day 1: Islamabad to Chillas&#10;Day 2: Hunza sightseeing&#10;Hotels: 3-star preferred..."
+                />
+              </div>
+            </section>
+          )}
 
           {/* Customer */}
           <section className="grid gap-4 sm:grid-cols-2">
@@ -274,8 +364,8 @@ export function BookingFormModal({
             </h3>
             <div>
               <label className={labelClass}>
-                Total Price (PKR)
-                {suggestedPrice > 0 && (
+                Total Price (PKR) {isCustom && "*"}
+                {!isCustom && suggestedPrice > 0 && (
                   <span className="ml-2 font-normal text-stone-400">
                     Suggested: {formatCurrency(suggestedPrice)}
                   </span>
@@ -284,11 +374,13 @@ export function BookingFormModal({
               <input
                 type="number"
                 min={0}
+                required={isCustom}
                 value={totalPrice}
                 onChange={(e) =>
                   setTotalPrice(e.target.value === "" ? "" : Number(e.target.value))
                 }
                 className={inputClass}
+                placeholder={isCustom ? "Enter quoted price" : undefined}
               />
             </div>
             <div>
@@ -327,13 +419,19 @@ export function BookingFormModal({
               />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Special Requests</label>
+              <label className={labelClass}>
+                {isCustom ? "Additional Notes" : "Special Requests"}
+              </label>
               <textarea
                 rows={2}
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
                 className={inputClass}
-                placeholder="Dietary needs, room preferences..."
+                placeholder={
+                  isCustom
+                    ? "Vehicle type, hotel preference, guide language..."
+                    : "Dietary needs, room preferences..."
+                }
               />
             </div>
           </section>

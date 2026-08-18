@@ -2,11 +2,14 @@ import { addDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { serializeBooking } from "@/lib/db";
 import { generateBookingRef } from "@/lib/utils";
+import { findPackageTier, type PackageLevel } from "@/lib/package-tiers";
 import type { PaymentStatus, TourType } from "@prisma/client";
 
 export interface BookingInput {
   tourId: string;
   tourType: TourType;
+  packageLabel?: string;
+  customDuration?: number;
   startDate: string;
   customerName: string;
   customerPhone: string;
@@ -35,16 +38,32 @@ export async function createBooking(input: BookingInput) {
   });
   if (!tour) throw new Error("Tour not found");
 
-  const tier =
-    tour.pricingTiers.find((t) => t.tourType === input.tourType) ??
-    tour.pricingTiers[0];
+  let tier = tour.pricingTiers.find((t) => t.tourType === input.tourType) ?? tour.pricingTiers[0];
+
+  if (input.packageLabel && input.tourType !== "CUSTOM") {
+    const level = input.packageLabel.toLowerCase().includes("deluxe")
+      ? ("deluxe" as PackageLevel)
+      : ("standard" as PackageLevel);
+    const matched = findPackageTier(tour.pricingTiers, input.tourType, level);
+    if (matched) tier = tour.pricingTiers.find((t) => t.label === matched.label && t.tourType === matched.tourType) ?? tier;
+  }
 
   const totalPrice =
     input.totalPrice ??
     (tier ? calculateTotalPrice(input.tourType, tier.price, input.participants) : 0);
 
   const startDate = new Date(input.startDate);
-  const endDate = addDays(startDate, tour.duration);
+  const tripDays = input.customDuration ?? tour.duration;
+  const endDate = addDays(startDate, tripDays);
+
+  const packageNote =
+    input.packageLabel && input.tourType !== "CUSTOM"
+      ? `Package: ${input.packageLabel}`
+      : null;
+
+  const specialRequests = [packageNote, input.specialRequests?.trim()]
+    .filter(Boolean)
+    .join("\n\n") || null;
 
   const passengers = input.passengerNames
     .filter(Boolean)
@@ -90,7 +109,7 @@ export async function createBooking(input: BookingInput) {
       amountPaid: input.amountPaid ?? 0,
       paymentStatus: input.paymentStatus ?? "PENDING",
       paymentNotes: input.paymentNotes?.trim() || null,
-      specialRequests: input.specialRequests?.trim() || null,
+      specialRequests,
     },
     include: { tour: true, customer: true },
   });

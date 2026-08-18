@@ -58,7 +58,9 @@ export const defaultTourForm = (): TourFormData => ({
   isActive: true,
   pricingTiers: [
     EMPTY_TIER("GROUP", "Standard Package"),
-    EMPTY_TIER("PRIVATE", "Private Tour (up to 6 pax)"),
+    EMPTY_TIER("GROUP", "Deluxe Package"),
+    EMPTY_TIER("PRIVATE", "Standard Private Tour"),
+    EMPTY_TIER("PRIVATE", "Deluxe Private Tour"),
     EMPTY_TIER("CUSTOM", "Custom Itinerary"),
   ],
 });
