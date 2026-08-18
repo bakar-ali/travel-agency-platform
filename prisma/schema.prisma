@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TourType {
+  GROUP
+  PRIVATE
+  CUSTOM
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  PENDING
+}
+
+model Tour {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  title        String
+  destination  String
+  duration     Int
+  durationText String
+  summary      String
+  overview     String?
+  highlights   String      // JSON array
+  inclusions   String      // JSON array
+  exclusions   String      // JSON array
+  itinerary    String      // JSON array of day objects
+  imageUrl     String
+  galleryUrls  String      // JSON array
+  sourcePdf    String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  pricingTiers PricingTier[]
+  bookings     Booking[]
+}
+
+model PricingTier {
+  id          String   @id @default(cuid())
+  tourId      String
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tourType    TourType
+  label       String
+  price       Float
+  currency    String   @default("PKR")
+  description String?
+  minPax      Int      @default(1)
+  maxPax      Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([tourId, tourType, label])
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  email     String?
+  phone     String
+  cnic      String?
+  address   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  bookings  Booking[]
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingRef      String        @unique
+  tourId          String
+  tour            Tour          @relation(fields: [tourId], references: [id])
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  tourType        TourType
+  startDate       DateTime
+  endDate         DateTime
+  participants    Int
+  passengerList   String        // JSON array
+  totalPrice      Float
+  amountPaid      Float         @default(0)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentNotes    String?
+  specialRequests String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([startDate])
+  @@index([paymentStatus])
+  @@index([tourType])
+}

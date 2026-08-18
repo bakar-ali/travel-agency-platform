@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-geist-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
+}
+
+@layer base {
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-700 hover:shadow-lg active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-brand-600 px-6 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 active:scale-[0.98];
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-accent-500 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-accent-600 hover:shadow-lg active:scale-[0.98];
+  }
+
+  .card {
+    @apply rounded-2xl bg-white shadow-card transition hover:shadow-card-hover;
+  }
+
+  .section-title {
+    @apply font-display text-3xl font-bold tracking-tight text-stone-900 md:text-4xl;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold;
+  }
+}
+
+.fc {
+  --fc-border-color: #e7e5e4;
+  --fc-button-bg-color: #0284c7;
+  --fc-button-border-color: #0284c7;
+  --fc-button-hover-bg-color: #0369a1;
+  --fc-button-hover-border-color: #0369a1;
+  --fc-today-bg-color: #f0f9ff;
+  font-family: var(--font-geist-sans);
+}
+
+.fc .fc-toolbar-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+
+.fc-event {
+  cursor: pointer;
+  border-radius: 6px !important;
+  border: none !important;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+}
