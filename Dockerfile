@@ -41,4 +41,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["su-exec", "nextjs", "node", "server.js"]
+CMD ["node", "server.js"]
