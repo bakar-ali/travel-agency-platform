@@ -32,6 +32,15 @@ The container automatically runs `prisma db push` and PDF ingestion on startup.
 
 App will be available at **http://your-server:3000**
 
+### Dokploy deployment
+
+1. Set these environment variables in the Dokploy UI:
+   - `DATABASE_URL`
+   - `NEXT_PUBLIC_INSTAGRAM_URL`
+   - `INSTAGRAM_URL`
+2. In domain settings, route traffic to **container port `3000`** (internal port).
+3. Redeploy — the compose file uses `expose` only, so it won't conflict with other apps bound to host port 3000.
+
 ### Required `.env` on server
 
 ```env
